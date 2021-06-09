@@ -20,11 +20,16 @@ const (
 	Unknown
 )
 
+var replLoop bool = true
+
 func Repl() error {
-	for {
+	for replLoop {
 		input, err := getInput()
 		if err != nil {
 			return err
+		}
+		if input == "" {
+			continue
 		}
 		command, err := getCommand(input)
 		if err != nil {
@@ -40,10 +45,12 @@ func Repl() error {
 		}
 		fmt.Println(result)
 	}
+
+	return nil
 }
 
 func getInput() (string, error) {
-	fmt.Printf("%s>", prompt)
+	fmt.Printf("%s> ", prompt)
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
 
@@ -51,13 +58,14 @@ func getInput() (string, error) {
 		return "", errors.Wrap(err, "could not read input")
 	}
 
+	input = strings.TrimSpace(input)
 	return input, nil
 }
 
 func getCommand(input string) (Command, error) {
 	output := strings.Split(input, " ")
 	if len(output) == 0 {
-		return Unknown, errors.New("No command detected.")
+		return Unknown, nil
 	}
 
 	switch strings.ToLower(output[0]) {
@@ -68,7 +76,7 @@ func getCommand(input string) (Command, error) {
 	case "read":
 		return Read, nil
 	default:
-		return Unknown, errors.New("Unknown command.")
+		return Unknown, nil
 	}
 }
 
@@ -78,13 +86,14 @@ func getExecutor(command Command) (func(input string) (string, error), error) {
 		return exitExecutor, nil
 	}
 
-	return testExecutor, nil
+	return defaultExecutor, nil
+}
+
+func defaultExecutor(input string) (string, error) {
+	return "Unknown command.", nil
 }
 
 func exitExecutor(input string) (string, error) {
-	panic("ahhhh")
-}
-
-func testExecutor(input string) (string, error) {
-	return input, nil
+	replLoop = false
+	return "Bye.", nil
 }
