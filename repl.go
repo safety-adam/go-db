@@ -17,17 +17,18 @@ const (
 	Exit Command = iota
 	Insert
 	Select
+	Open
 	Unknown
 )
 
 var replLoop bool = true
 
 // Repl runs a repl loop to read, parse and execute user input
-func Repl() error {
+func repl(errc chan<- error) {
 	for replLoop {
 		input, err := getInput()
 		if err != nil {
-			return err
+			errc <- err
 		}
 		// If the input is empty, skip the remaining parts of the loop
 		if input == "" {
@@ -35,20 +36,20 @@ func Repl() error {
 		}
 		command, err := getCommand(input)
 		if err != nil {
-			return err
+			errc <- err
 		}
 		executor, err := getExecutor(command)
 		if err != nil {
-			return err
+			errc <- err
 		}
 		result, err := executor(input)
 		if err != nil {
-			return err
+			errc <- err
 		}
 		fmt.Println(result)
 	}
 
-	return nil
+	errc <- nil
 }
 
 func getInput() (string, error) {
@@ -79,6 +80,8 @@ func getCommand(input string) (Command, error) {
 		return Insert, nil
 	case "select":
 		return Select, nil
+	case "open":
+		return Open, nil
 	default:
 		return Unknown, nil
 	}
@@ -93,7 +96,8 @@ func getExecutor(command Command) (func(input string) (string, error), error) {
 		return execInsert, nil
 	case Select:
 		return execSelect, nil
-
+	case Open:
+		return execOpen, nil
 	}
 
 	return defaultExecutor, nil

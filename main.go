@@ -1,43 +1,34 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+)
 
 // https://stackoverflow.com/questions/28081486/how-can-i-go-run-a-project-with-multiple-files-in-the-main-package
 
 func main() {
 
-	//Goals:
-	// 1. Read and write data into a DB file
-	// 2. Store the data in the file in a structured way ???
-	// 3. REPL interface
+	errc := make(chan error)
 
-	err := Repl()
-	if err != nil {
-		fmt.Println(err)
+	go run(errc)
+
+	if err := <-errc; err != nil {
+		fmt.Fprintf(os.Stderr, "FATAL: %v\n", err)
+		os.Exit(1)
 	}
+	os.Exit(0)
+}
 
-	/*filename := "test"
-	data := "Hello World"
+func run(errc chan<- error) {
+	defer close(errc)
 
-	// Write
-	{
-		f, err := os.Create(filename)
-		if err != nil {
-			panic(err)
-		}
-		f.WriteAt([]byte(data), 0)
-		f.Close()
-	}
+	go repl(errc)
 
-	// Read
-	{
-		f, err := os.Open(filename)
-		if err != nil {
-			panic(err)
-		}
-		d := make([]byte, 5)
-		f.ReadAt(d, 6)
-		fmt.Println(string(d))
-	}*/
-
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	<-stop
+	fmt.Fprintln(os.Stdout)
 }
